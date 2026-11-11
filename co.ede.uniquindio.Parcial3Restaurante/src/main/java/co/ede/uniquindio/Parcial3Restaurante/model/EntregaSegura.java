@@ -27,6 +27,19 @@ public class EntregaSegura extends EmpresaDomicilio {
         this.umbralRecargoKm = umbralRecargoKm;
     }
 
+    /**
+     * Tarifa base + tarifa por kilometro x distancia, mas el recargo cuando
+     * la distancia supera el umbral (5 km).
+     */
+    @Override
+    public double calcularCostoDomicilio(double distanciaKm) {
+        double costo = getTarifaBase() + getTarifaKm() * distanciaKm;
+        if (distanciaKm > umbralRecargoKm) {
+            costo += recargoDistancia;
+        }
+        return costo;
+    }
+
     @Override
     public String toString() {
         return "EntregaSegura{" + super.toString() + ", recargoDistancia=" + recargoDistancia

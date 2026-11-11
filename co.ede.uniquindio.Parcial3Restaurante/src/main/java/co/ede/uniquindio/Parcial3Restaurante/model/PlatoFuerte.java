@@ -37,6 +37,25 @@ public class PlatoFuerte extends Producto {
         this.coccionAprobada = coccionAprobada;
     }
 
+    /**
+     * Precio de venta: precio base + 20 %.
+     */
+    @Override
+    public double calcularPrecioVenta() {
+        return getPrecioBase() * 1.20;
+    }
+
+    /**
+     * Calidad: peso entre 200 y 900 g, tiempo de preparacion entre 10 y 60 min
+     * y coccion aprobada.
+     */
+    @Override
+    public boolean cumpleCondicionesCalidad() {
+        boolean pesoValido = pesoGramos >= 200 && pesoGramos <= 900;
+        boolean tiempoValido = getTiempoPreparacion() >= 10 && getTiempoPreparacion() <= 60;
+        return pesoValido && tiempoValido && coccionAprobada;
+    }
+
     @Override
     public String toString() {
         return "PlatoFuerte{" + super.toString() + ", pesoGramos=" + pesoGramos

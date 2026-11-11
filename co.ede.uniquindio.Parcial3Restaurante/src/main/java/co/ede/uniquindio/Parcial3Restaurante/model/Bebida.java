@@ -47,6 +47,35 @@ public class Bebida extends Producto {
         this.requierePreparacionEspecial = requierePreparacionEspecial;
     }
 
+    /**
+     * Precio de venta: precio base + 10 %, mas $3.000 fijos si requiere
+     * preparacion especial.
+     */
+    @Override
+    public double calcularPrecioVenta() {
+        double precio = getPrecioBase() * 1.10;
+        if (requierePreparacionEspecial) {
+            precio += 3000;
+        }
+        return precio;
+    }
+
+    /**
+     * Calidad: volumen entre 150 y 1.500 ml; temperatura entre 0 y 10 C si es
+     * fria, o entre 55 y 85 C si es caliente.
+     */
+    @Override
+    public boolean cumpleCondicionesCalidad() {
+        boolean volumenValido = volumenMl >= 150 && volumenMl <= 1500;
+        boolean temperaturaValida;
+        if (fria) {
+            temperaturaValida = temperaturaServicio >= 0 && temperaturaServicio <= 10;
+        } else {
+            temperaturaValida = temperaturaServicio >= 55 && temperaturaServicio <= 85;
+        }
+        return volumenValido && temperaturaValida;
+    }
+
     @Override
     public String toString() {
         return "Bebida{" + super.toString() + ", volumenMl=" + volumenMl

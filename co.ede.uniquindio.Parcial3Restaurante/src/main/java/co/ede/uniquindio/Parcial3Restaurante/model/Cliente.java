@@ -71,6 +71,32 @@ public class Cliente {
         this.listPedidos = listPedidos;
     }
 
+    /**
+     * Agrega un pedido al historial del cliente sin repetirlo (se compara
+     * por codigo).
+     * @return true si se agrego; false si ya estaba en el historial.
+     */
+    public boolean agregarPedido(Pedido pedido) {
+        if (pedido == null || buscarPedido(pedido.getCodigo()) != null) {
+            return false;
+        }
+        listPedidos.add(pedido);
+        return true;
+    }
+
+    /**
+     * Busca un pedido del historial por su codigo.
+     * @return el pedido, o null si el cliente no tiene uno con ese codigo.
+     */
+    public Pedido buscarPedido(String codigo) {
+        for (Pedido pedido : listPedidos) {
+            if (pedido.getCodigo().equals(codigo)) {
+                return pedido;
+            }
+        }
+        return null;
+    }
+
     @Override
     public String toString() {
         return "Cliente{" + "documento=" + documento

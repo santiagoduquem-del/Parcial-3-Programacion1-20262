@@ -28,6 +28,16 @@ public class DetallePedido {
         this.theProducto = theProducto;
     }
 
+    /**
+     * Subtotal de la linea: precio de venta del producto x cantidad.
+     */
+    public double calcularSubtotal() {
+        if (theProducto == null || cantidad <= 0) {
+            return 0;
+        }
+        return theProducto.calcularPrecioVenta() * cantidad;
+    }
+
     @Override
     public String toString() {
         return "DetallePedido{" + "producto=" + (theProducto != null ? theProducto.getCodigo() : null)

@@ -1,6 +1,6 @@
 package co.ede.uniquindio.Parcial3Restaurante.model;
 
-public abstract class Producto {
+public abstract class Producto implements IVendible, IVerificableCalidad {
 
     private String codigo;
     private String nombre;
