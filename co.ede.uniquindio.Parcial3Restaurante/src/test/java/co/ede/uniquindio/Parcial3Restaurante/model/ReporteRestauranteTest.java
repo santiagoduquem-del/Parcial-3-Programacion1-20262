@@ -166,4 +166,6 @@ class ReporteRestauranteTest {
         assertEquals(24000 + 5500 + 9500, reporte.totalFacturado(), DELTA);
         assertEquals(reporte.ingresosRestaurante() + reporte.ingresosDomicilios(), reporte.totalFacturado(), DELTA);
     }
+
+    private String prueba; // variable de prueba para que github deskopt lea los cambios
 }
