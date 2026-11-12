@@ -2,8 +2,6 @@ package co.ede.uniquindio.Parcial3Restaurante.model;
 
 import java.util.List;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.Map;
 
 public class Restaurante {
 
@@ -196,7 +194,8 @@ public class Restaurante {
 
     /**
      * Agrega un producto del menu al pedido. Si el producto ya estaba en el
-     * pedido, suma la cantidad.
+     * pedido, suma la cantidad. La regla de estado la valida el propio
+     * {@link Pedido#agregarDetalle(Producto, int)}.
      * @throws ElementoNoEncontradoException    si el pedido o el producto no existen.
      * @throws EstadoPedidoInvalidoException    si el pedido no esta PENDIENTE.
      * @throws CantidadInvalidaException        si la cantidad no es mayor que cero.
@@ -207,9 +206,6 @@ public class Restaurante {
             CantidadInvalidaException, ProductoNoCumpleCalidadException {
         Pedido pedido = obtenerPedido(codigoPedido);
         Producto producto = obtenerProducto(codigoProducto);
-        if (pedido.getEstado() != EstadoPedido.PENDIENTE) {
-            throw new EstadoPedidoInvalidoException(pedido.getCodigo(), pedido.getEstado().toString(), "modificar");
-        }
         if (cantidad <= 0) {
             throw new CantidadInvalidaException(cantidad);
         }
@@ -220,8 +216,8 @@ public class Restaurante {
     }
 
     /**
-     * Solicita el domicilio a la empresa indicada con el procedimiento comun.
-     * Registra la distancia en el pedido y deja que la empresa decida.
+     * Solicita el domicilio a la empresa indicada. Las reglas (estado,
+     * modalidad y aceptacion) las valida {@link Pedido#solicitarDomicilio}.
      * @throws ElementoNoEncontradoException si el pedido o la empresa no existen.
      * @throws EstadoPedidoInvalidoException si el pedido no esta PENDIENTE.
      * @throws PedidoInvalidoException       si el pedido no es a domicilio.
@@ -232,16 +228,7 @@ public class Restaurante {
             PedidoInvalidoException, DomicilioNoAceptadoException {
         Pedido pedido = obtenerPedido(codigoPedido);
         EmpresaDomicilio empresa = obtenerEmpresaDomicilio(nombreEmpresa);
-        if (pedido.getEstado() != EstadoPedido.PENDIENTE) {
-            throw new EstadoPedidoInvalidoException(pedido.getCodigo(), pedido.getEstado().toString(), "solicitar domicilio para");
-        }
-        if (pedido.getModalidadEntrega() != ModalidadEntrega.DOMICILIO) {
-            throw new PedidoInvalidoException("El pedido '" + pedido.getCodigo() + "' no es a domicilio.");
-        }
-        pedido.setDistanciaKm(distanciaKm);
-        if (!empresa.solicitarServicio(pedido)) {
-            throw new DomicilioNoAceptadoException(empresa.getNombre(), distanciaKm);
-        }
+        pedido.solicitarDomicilio(empresa, distanciaKm);
     }
 
     // ================= CICLO DE VIDA DEL PEDIDO =================
@@ -411,32 +398,14 @@ public class Restaurante {
 
     // ================= INGRESOS =================
 
-    /** Un pedido cuenta como venta si esta CONFIRMADO o ENTREGADO. */
-    private boolean esPedidoContabilizable(Pedido pedido) {
-        return pedido.getEstado() == EstadoPedido.CONFIRMADO
-                || pedido.getEstado() == EstadoPedido.ENTREGADO;
-    }
-
     /** Ingresos propios del restaurante: solo productos, sin domicilios. */
     public double calcularIngresosRestaurante() {
-        double total = 0;
-        for (Pedido pedido : listPedidos) {
-            if (esPedidoContabilizable(pedido)) {
-                total += pedido.calcularValorProductos();
-            }
-        }
-        return total;
+        return ReporteRestaurante.generar(listPedidos).ingresosRestaurante();
     }
 
     /** Total de domicilios, diferenciado de los ingresos propios. */
     public double calcularIngresosDomicilios() {
-        double total = 0;
-        for (Pedido pedido : listPedidos) {
-            if (esPedidoContabilizable(pedido)) {
-                total += pedido.calcularCostoDomicilio();
-            }
-        }
-        return total;
+        return ReporteRestaurante.generar(listPedidos).ingresosDomicilios();
     }
 
     /**
@@ -444,24 +413,7 @@ public class Restaurante {
      * @return null si no hay ventas.
      */
     public Producto consultarProductoMasVendido() {
-        Map<String, Integer> unidades = new LinkedHashMap<>();
-        for (Pedido pedido : listPedidos) {
-            if (!esPedidoContabilizable(pedido)) {
-                continue;
-            }
-            for (DetallePedido detalle : pedido.getListDetalles()) {
-                unidades.merge(detalle.getTheProducto().getCodigo(), detalle.getCantidad(), Integer::sum);
-            }
-        }
-        String codigoMasVendido = null;
-        int maximo = 0;
-        for (Map.Entry<String, Integer> entrada : unidades.entrySet()) {
-            if (entrada.getValue() > maximo) {
-                maximo = entrada.getValue();
-                codigoMasVendido = entrada.getKey();
-            }
-        }
-        return codigoMasVendido == null ? null : buscarProducto(codigoMasVendido);
+        return ReporteRestaurante.generar(listPedidos).productoMasVendido();
     }
 
     /**
@@ -470,31 +422,7 @@ public class Restaurante {
      * @return null si no hay ventas.
      */
     public String consultarCategoriaMayoresIngresos() {
-        double platos = 0;
-        double bebidas = 0;
-        double postres = 0;
-        for (Pedido pedido : listPedidos) {
-            if (!esPedidoContabilizable(pedido)) {
-                continue;
-            }
-            for (DetallePedido detalle : pedido.getListDetalles()) {
-                Producto producto = detalle.getTheProducto();
-                if (producto instanceof PlatoFuerte) {
-                    platos += detalle.calcularSubtotal();
-                } else if (producto instanceof Bebida) {
-                    bebidas += detalle.calcularSubtotal();
-                } else if (producto instanceof Postre) {
-                    postres += detalle.calcularSubtotal();
-                }
-            }
-        }
-        if (platos == 0 && bebidas == 0 && postres == 0) {
-            return null;
-        }
-        if (platos >= bebidas && platos >= postres) {
-            return "PlatoFuerte";
-        }
-        return bebidas >= postres ? "Bebida" : "Postre";
+        return ReporteRestaurante.generar(listPedidos).categoriaMayoresIngresos();
     }
 
     @Override

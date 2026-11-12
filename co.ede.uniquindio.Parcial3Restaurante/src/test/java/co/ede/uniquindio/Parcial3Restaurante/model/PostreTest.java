@@ -86,4 +86,10 @@ class PostreTest {
         assertFalse(ambiente.cumpleCondicionesCalidad());
         assertTrue(ambiente.toString().startsWith("Postre{"));
     }
+
+    @Test
+    @DisplayName("getCategoria de Postre devuelve \"Postre\"")
+    void getCategoria() {
+        assertEquals("Postre", refrigerado.getCategoria());
+    }
 }

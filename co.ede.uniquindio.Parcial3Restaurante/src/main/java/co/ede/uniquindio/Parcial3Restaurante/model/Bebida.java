@@ -77,6 +77,11 @@ public class Bebida extends Producto {
     }
 
     @Override
+    public String getCategoria() {
+        return "Bebida";
+    }
+
+    @Override
     public String toString() {
         return "Bebida{" + super.toString() + ", volumenMl=" + volumenMl
                 + ", temperaturaServicio=" + temperaturaServicio

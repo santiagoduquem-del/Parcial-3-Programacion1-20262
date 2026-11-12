@@ -95,4 +95,10 @@ class BebidaTest {
         assertEquals(8500, fria.calcularPrecioVenta(), DELTA);
         assertTrue(fria.toString().startsWith("Bebida{"));
     }
+
+    @Test
+    @DisplayName("getCategoria de Bebida devuelve \"Bebida\"")
+    void getCategoria() {
+        assertEquals("Bebida", fria.getCategoria());
+    }
 }

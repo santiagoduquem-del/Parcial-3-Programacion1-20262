@@ -67,6 +67,11 @@ public class Postre extends Producto {
     }
 
     @Override
+    public String getCategoria() {
+        return "Postre";
+    }
+
+    @Override
     public String toString() {
         return "Postre{" + super.toString() + ", pesoGramos=" + pesoGramos
                 + ", temperaturaAlmacenamiento=" + temperaturaAlmacenamiento
