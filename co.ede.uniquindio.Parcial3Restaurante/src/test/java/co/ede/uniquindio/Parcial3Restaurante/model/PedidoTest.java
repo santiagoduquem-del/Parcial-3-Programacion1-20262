@@ -42,7 +42,7 @@ class PedidoTest {
 
     @Test
     @DisplayName("agregarDetalle agrega una linea con el producto y la cantidad")
-    void agregarDetalle() throws CantidadInvalidaException {
+    void agregarDetalle() throws RestauranteException {
         pedido.agregarDetalle(plato, 2);
         assertEquals(1, pedido.getListDetalles().size());
         assertEquals(2, pedido.getListDetalles().get(0).getCantidad());
@@ -50,7 +50,7 @@ class PedidoTest {
 
     @Test
     @DisplayName("agregarDetalle suma la cantidad si el producto ya estaba en el pedido")
-    void agregarDetalleAcumula() throws CantidadInvalidaException {
+    void agregarDetalleAcumula() throws RestauranteException {
         pedido.agregarDetalle(plato, 2);
         pedido.agregarDetalle(plato, 3);
         assertEquals(1, pedido.getListDetalles().size());
@@ -81,7 +81,7 @@ class PedidoTest {
 
     @Test
     @DisplayName("calcularValorProductos suma los subtotales de todas las lineas")
-    void calcularValorProductos() throws CantidadInvalidaException {
+    void calcularValorProductos() throws RestauranteException {
         assertEquals(0, pedido.calcularValorProductos(), DELTA);
         pedido.agregarDetalle(plato, 2);   // 2 x 24.000
         pedido.agregarDetalle(bebida, 1);  // 1 x 5.500
@@ -117,7 +117,7 @@ class PedidoTest {
 
     @Test
     @DisplayName("calcularTotal suma el valor de los productos y el domicilio")
-    void calcularTotal() throws CantidadInvalidaException {
+    void calcularTotal() throws RestauranteException {
         pedidoDomicilio.agregarDetalle(plato, 1);
         pedidoDomicilio.setDistanciaKm(3);
         new RapidoExpress().solicitarServicio(pedidoDomicilio);
@@ -146,7 +146,7 @@ class PedidoTest {
 
     @Test
     @DisplayName("Confirmar con un producto que no cumple calidad lanza ProductoNoCumpleCalidadException")
-    void confirmarProductoSinCalidad() throws CantidadInvalidaException {
+    void confirmarProductoSinCalidad() throws RestauranteException {
         plato.setCoccionAprobada(false);
         pedido.agregarDetalle(plato, 1);
         assertThrows(ProductoNoCumpleCalidadException.class, () -> pedido.confirmar());
@@ -154,7 +154,7 @@ class PedidoTest {
 
     @Test
     @DisplayName("Confirmar un pedido a domicilio sin empresa lanza DomicilioNoAceptadoException")
-    void confirmarDomicilioSinEmpresa() throws CantidadInvalidaException {
+    void confirmarDomicilioSinEmpresa() throws RestauranteException {
         pedidoDomicilio.agregarDetalle(plato, 1);
         assertThrows(DomicilioNoAceptadoException.class, () -> pedidoDomicilio.confirmar());
     }
@@ -228,12 +228,14 @@ class PedidoTest {
 
     @Test
     @DisplayName("Los getters y setters de Pedido guardan los valores y toString los resume")
-    void gettersYSetters() {
+    void gettersYSetters() throws RestauranteException {
         Cliente otro = new Cliente("2002", "Luis", "300", "luis@correo.com", "Calle 2");
+        // El estado ya no tiene setter: se cambia con el flujo confirmar()
+        pedido.agregarDetalle(plato, 1);
+        pedido.confirmar();
         pedido.setCodigo("PE9");
         pedido.setFecha(LocalDate.of(2026, 12, 24));
         pedido.setModalidadEntrega(ModalidadEntrega.DOMICILIO);
-        pedido.setEstado(EstadoPedido.CONFIRMADO);
         pedido.setTheCliente(otro);
         assertEquals("PE9", pedido.getCodigo());
         assertEquals(LocalDate.of(2026, 12, 24), pedido.getFecha());
@@ -243,5 +245,110 @@ class PedidoTest {
         String texto = pedido.toString();
         assertTrue(texto.contains("codigo=PE9"));
         assertTrue(texto.contains("cliente=2002"));
+    }
+
+    // ---------- Pruebas nuevas: esVenta ----------
+
+    @Test
+    @DisplayName("esVenta es falso para un pedido PENDIENTE")
+    void esVentaPendiente() {
+        assertFalse(pedido.esVenta());
+    }
+
+    @Test
+    @DisplayName("esVenta es verdadero para un pedido CONFIRMADO")
+    void esVentaConfirmado() throws RestauranteException {
+        pedido.agregarDetalle(plato, 1);
+        pedido.confirmar();
+        assertTrue(pedido.esVenta());
+    }
+
+    @Test
+    @DisplayName("esVenta es verdadero para un pedido ENTREGADO")
+    void esVentaEntregado() throws RestauranteException {
+        pedido.agregarDetalle(plato, 1);
+        pedido.confirmar();
+        pedido.entregar();
+        assertTrue(pedido.esVenta());
+    }
+
+    @Test
+    @DisplayName("esVenta es falso para un pedido CANCELADO")
+    void esVentaCancelado() throws RestauranteException {
+        pedido.agregarDetalle(plato, 1);
+        pedido.confirmar();
+        pedido.cancelar();
+        assertFalse(pedido.esVenta());
+    }
+
+    // ---------- Pruebas nuevas: reglas de estado en agregarDetalle ----------
+
+    @Test
+    @DisplayName("agregarDetalle sobre un pedido CONFIRMADO lanza EstadoPedidoInvalidoException y no lo modifica")
+    void agregarDetalleConfirmado() throws RestauranteException {
+        pedido.agregarDetalle(plato, 1);
+        pedido.confirmar();
+        assertThrows(EstadoPedidoInvalidoException.class, () -> pedido.agregarDetalle(bebida, 1));
+        assertEquals(1, pedido.getListDetalles().size());
+        assertEquals(1, pedido.getListDetalles().get(0).getCantidad());
+    }
+
+    @Test
+    @DisplayName("agregarDetalle sobre un pedido CANCELADO lanza EstadoPedidoInvalidoException")
+    void agregarDetalleCancelado() throws RestauranteException {
+        pedido.cancelar();
+        assertThrows(EstadoPedidoInvalidoException.class, () -> pedido.agregarDetalle(plato, 1));
+        assertTrue(pedido.getListDetalles().isEmpty());
+    }
+
+    @Test
+    @DisplayName("agregarDetalle valida el estado antes que la cantidad")
+    void agregarDetalleEstadoAntesQueCantidad() throws RestauranteException {
+        pedido.cancelar();
+        assertThrows(EstadoPedidoInvalidoException.class, () -> pedido.agregarDetalle(plato, 0));
+    }
+
+    // ---------- Pruebas nuevas: solicitarDomicilio en Pedido ----------
+
+    @Test
+    @DisplayName("solicitarDomicilio registra la distancia y la empresa cuando esta acepta")
+    void solicitarDomicilioAcepta() throws RestauranteException {
+        RapidoExpress rapido = new RapidoExpress();
+        pedidoDomicilio.solicitarDomicilio(rapido, 3);
+        assertEquals(3, pedidoDomicilio.getDistanciaKm(), DELTA);
+        assertTrue(pedidoDomicilio.isDomicilioAceptado());
+        assertSame(rapido, pedidoDomicilio.getTheEmpresaDomicilio());
+        assertEquals(9500, pedidoDomicilio.calcularCostoDomicilio(), DELTA);
+    }
+
+    @Test
+    @DisplayName("solicitarDomicilio lanza DomicilioNoAceptadoException si la empresa rechaza la distancia")
+    void solicitarDomicilioRechaza() {
+        DomicilioNoAceptadoException ex = assertThrows(DomicilioNoAceptadoException.class,
+                () -> pedidoDomicilio.solicitarDomicilio(new RapidoExpress(), 15));
+        assertTrue(ex.getMessage().contains("RapidoExpress"));
+        assertEquals(15, pedidoDomicilio.getDistanciaKm(), DELTA);
+        assertFalse(pedidoDomicilio.isDomicilioAceptado());
+        assertNull(pedidoDomicilio.getTheEmpresaDomicilio());
+    }
+
+    @Test
+    @DisplayName("solicitarDomicilio sobre un pedido no PENDIENTE lanza EstadoPedidoInvalidoException")
+    void solicitarDomicilioNoPendiente() throws RestauranteException {
+        pedidoDomicilio.cancelar();
+        assertThrows(EstadoPedidoInvalidoException.class,
+                () -> pedidoDomicilio.solicitarDomicilio(new RapidoExpress(), 3));
+        assertEquals(0, pedidoDomicilio.getDistanciaKm(), DELTA);
+        assertFalse(pedidoDomicilio.isDomicilioAceptado());
+    }
+
+    @Test
+    @DisplayName("solicitarDomicilio sobre un pedido de consumo en restaurante lanza PedidoInvalidoException")
+    void solicitarDomicilioConsumoRestaurante() {
+        PedidoInvalidoException ex = assertThrows(PedidoInvalidoException.class,
+                () -> pedido.solicitarDomicilio(new RapidoExpress(), 3));
+        assertEquals("El pedido 'PE1' no es a domicilio.", ex.getMessage());
+        assertEquals(0, pedido.getDistanciaKm(), DELTA);
+        assertFalse(pedido.isDomicilioAceptado());
     }
 }

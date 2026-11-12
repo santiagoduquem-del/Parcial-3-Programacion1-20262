@@ -56,6 +56,9 @@ public abstract class Producto implements IVendible, IVerificableCalidad {
         this.tiempoPreparacion = tiempoPreparacion;
     }
 
+    /** Categoria del producto: "PlatoFuerte", "Bebida" o "Postre". */
+    public abstract String getCategoria();
+
     @Override
     public String toString() {
         return "codigo=" + codigo

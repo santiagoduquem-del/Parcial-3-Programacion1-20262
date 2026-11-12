@@ -57,6 +57,11 @@ public class PlatoFuerte extends Producto {
     }
 
     @Override
+    public String getCategoria() {
+        return "PlatoFuerte";
+    }
+
+    @Override
     public String toString() {
         return "PlatoFuerte{" + super.toString() + ", pesoGramos=" + pesoGramos
                 + ", tipoPreparacion=" + tipoPreparacion

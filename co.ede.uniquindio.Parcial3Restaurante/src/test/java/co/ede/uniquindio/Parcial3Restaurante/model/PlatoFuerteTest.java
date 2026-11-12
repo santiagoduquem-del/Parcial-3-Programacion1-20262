@@ -93,4 +93,10 @@ class PlatoFuerteTest {
         assertTrue(texto.startsWith("PlatoFuerte{"));
         assertTrue(texto.contains("codigo=P1"));
     }
+
+    @Test
+    @DisplayName("getCategoria de PlatoFuerte devuelve \"PlatoFuerte\"")
+    void getCategoria() {
+        assertEquals("PlatoFuerte", plato.getCategoria());
+    }
 }

@@ -58,10 +58,6 @@ public class Pedido {
         return estado;
     }
 
-    public void setEstado(EstadoPedido estado) {
-        this.estado = estado;
-    }
-
     public double getDistanciaKm() {
         return distanciaKm;
     }
@@ -105,9 +101,14 @@ public class Pedido {
     /**
      * Agrega un producto al pedido. Si el producto ya estaba en el pedido,
      * suma la cantidad al detalle existente en lugar de duplicarlo.
-     * @throws CantidadInvalidaException si la cantidad no es mayor que cero.
+     * @throws EstadoPedidoInvalidoException si el pedido no esta PENDIENTE.
+     * @throws CantidadInvalidaException     si la cantidad no es mayor que cero.
      */
-    public void agregarDetalle(Producto producto, int cantidad) throws CantidadInvalidaException {
+    public void agregarDetalle(Producto producto, int cantidad)
+            throws CantidadInvalidaException, EstadoPedidoInvalidoException {
+        if (estado != EstadoPedido.PENDIENTE) {
+            throw new EstadoPedidoInvalidoException(codigo, estado.toString(), "modificar");
+        }
         if (producto == null) {
             throw new IllegalArgumentException("El producto no puede ser nulo.");
         }
@@ -121,6 +122,35 @@ public class Pedido {
             }
         }
         listDetalles.add(new DetallePedido(producto, cantidad));
+    }
+
+    /**
+     * Solicita el domicilio a la empresa indicada: registra la distancia y
+     * deja que la empresa decida con su procedimiento comun.
+     * @throws EstadoPedidoInvalidoException si el pedido no esta PENDIENTE.
+     * @throws PedidoInvalidoException       si el pedido no es a domicilio.
+     * @throws DomicilioNoAceptadoException  si la empresa no acepta el recorrido.
+     */
+    public void solicitarDomicilio(EmpresaDomicilio empresa, double distanciaKm)
+            throws EstadoPedidoInvalidoException, PedidoInvalidoException, DomicilioNoAceptadoException {
+        if (estado != EstadoPedido.PENDIENTE) {
+            throw new EstadoPedidoInvalidoException(codigo, estado.toString(), "solicitar domicilio para");
+        }
+        if (modalidadEntrega != ModalidadEntrega.DOMICILIO) {
+            throw new PedidoInvalidoException("El pedido '" + codigo + "' no es a domicilio.");
+        }
+        if (empresa == null) {
+            throw new IllegalArgumentException("La empresa no puede ser nula.");
+        }
+        this.distanciaKm = distanciaKm;
+        if (!empresa.solicitarServicio(this)) {
+            throw new DomicilioNoAceptadoException(empresa.getNombre(), distanciaKm);
+        }
+    }
+
+    /** Un pedido cuenta como venta si esta CONFIRMADO o ENTREGADO. */
+    public boolean esVenta() {
+        return estado == EstadoPedido.CONFIRMADO || estado == EstadoPedido.ENTREGADO;
     }
 
     /**
